@@ -1,0 +1,153 @@
+/*
+ * wifi.c
+ *
+ *  Author: Alexey Vaganov
+ */ 
+#include "common.h"
+#include <avr/interrupt.h>
+#include <string.h>
+#include <stdlib.h>
+#include <util/delay.h>
+
+volatile bool wifi_have_data;
+#define WIFI_MAX_BUFFER 1000
+uint8_t wifi_rx_buffer[WIFI_MAX_BUFFER+1];
+uint16_t wifi_rx_buffer_len;
+uint16_t wifi_rx_expect;
+bool wifi_rx_start = false;
+uint8_t wifi_tx_buffer[WIFI_MAX_BUFFER+1];
+uint16_t wifi_tx_buffer_len;
+uint16_t wifi_tx_buffer_cnt;
+
+void wifi_puts(const char *send)
+{
+	while (*send) {
+		loop_until_bit_is_set(UCSR1A, UDRE1);
+		UDR1 = *send++;
+	}
+}
+
+void wifi_putl(long val)
+{
+	char buf[12];
+	wifi_puts(ltoa(val, buf, 10));
+}
+
+void wifi_send(const uint8_t *send, uint16_t count)
+{
+	if (count > WIFI_MAX_BUFFER - 17) return;
+	char buf[18] = "AT+CIPSEND=";
+	// put count str in the end if buf (length 11)
+	itoa(count, &buf[11], 10);
+	// and add <CR><LF>
+	strcat(buf, "\r\n");
+	size_t hlen = strlen(buf);
+	memcpy(wifi_tx_buffer, buf, hlen);
+	// put to the end of buffer data to send
+	memcpy(&wifi_tx_buffer[hlen], send, count);
+	wifi_tx_buffer_len = hlen + count;
+	// send first byte
+	wifi_tx_buffer_cnt = 1;
+	loop_until_bit_is_set(UCSR1A, UDRE1);
+	UDR1 = wifi_tx_buffer[0];
+}
+
+void wifi_process(void)
+{
+	modbus_write(wifi_rx_buffer, wifi_rx_buffer_len);
+	wifi_rx_buffer_len = 0;
+	wifi_have_data = false;
+}
+
+void wifi_module_init(void)
+{
+	wifi_puts("AT+CWMODE=\"Station\"\r\n");
+	_delay_ms(500);
+	wifi_puts("AT+RST\r\n");
+	_delay_ms(1000);
+	wifi_puts("AT+CWJAP=\"");
+	wifi_puts(config.wifi_ssid);
+	wifi_puts("\",\"");
+	wifi_puts(config.wifi_key);
+	wifi_puts("\"\r\n");
+	_delay_ms(1000);
+	wifi_puts("AT+CIPSTA=\"");
+	wifi_puts(config.wifi_ip);
+	wifi_puts("\",\"");
+	wifi_puts(config.wifi_mask);
+	wifi_puts("\",\"");
+	wifi_puts(config.wifi_gateway);
+	wifi_puts("\"\r\n");
+	_delay_ms(500);
+	wifi_puts("AT+CIPMUX=0\r\n");
+	_delay_ms(500);
+	wifi_puts("AT+CIPSTART=\"UDP\",\"0.0.0.0\",\"");
+	wifi_putl(config.wifi_udp_dst);
+	wifi_puts("\",\"");
+	wifi_putl(config.wifi_udp_src);
+	wifi_puts(",0\r\n");
+	_delay_ms(500);
+}
+
+void wifi_uart_init(void)
+{
+	#define BAUD 115200
+	#include <util/setbaud.h>
+	UBRR1H = UBRRH_VALUE;
+	UBRR1L = UBRRL_VALUE;
+
+	#if USE_2X
+	UCSR1A |= _BV(U2X1);
+	#else
+	UCSR1A &= ~_BV(U2X1);
+	#endif
+
+	UCSR1C = _BV(UCSZ11) | _BV(UCSZ10); /* 8-N-1 */
+	// Enable USART1 RX, TX and RX/TX Complete Interrupt
+	UCSR1B = _BV(RXEN1) | _BV(TXEN1) | _BV(RXCIE1) | _BV(TXCIE1);
+	
+	wifi_module_init();
+}
+
+ISR(USART1_RX_vect)
+{
+	uint8_t new_byte;
+	new_byte = UDR1;
+	// +IPD,<len>:<data>
+	if (!wifi_rx_start && (new_byte == '+')) {
+		wifi_rx_buffer_len = 0;
+		wifi_rx_expect = 0;
+		wifi_rx_start = true;
+	}
+	if (wifi_rx_start && (wifi_rx_buffer_len < WIFI_MAX_BUFFER)) {
+		wifi_rx_buffer[wifi_rx_buffer_len++] = new_byte;
+		if (wifi_rx_expect) {
+			wifi_rx_expect--;
+			if (wifi_rx_expect == 0) {
+				wifi_have_data = true;
+				wifi_rx_start = false;
+			}
+		} else if (wifi_rx_buffer_len == 5) {
+			if (memcmp("+IPD,", wifi_rx_buffer, 5) != 0) {
+				wifi_rx_buffer_len = 0;
+				wifi_rx_start = false;
+			}
+		} else if (wifi_rx_buffer_len > 5) {
+			if (new_byte == ':') {
+				char buf[5];
+				memset(buf, 0, 5);
+				memcpy(buf, &wifi_rx_buffer[5], wifi_rx_buffer_len-6);
+				wifi_rx_expect = atol(buf);
+				wifi_rx_buffer_len = 0;
+			}
+		}
+	}
+}
+
+ISR(USART1_TX_vect)
+{
+	if (wifi_tx_buffer_cnt < wifi_tx_buffer_len) {
+		// send next byte in buffer
+		UDR1 = wifi_tx_buffer[wifi_tx_buffer_cnt++];
+	}
+}
