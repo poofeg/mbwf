@@ -352,8 +352,9 @@ void cli_uart_init(void) {
 	UCSR2A &= ~_BV(U2X2);
 	#endif
 
-	UCSR2C = _BV(UCSZ21) | _BV(UCSZ20); /* 8-N-1 */
-	UCSR2B = _BV(RXEN2) | _BV(TXEN2) | _BV(RXCIE2);   /* Enable RX, TX and RX Complete Interrupt */
+	UCSR2C = _BV(UCSZ21) | _BV(UCSZ20);  // 8-N-1
+	// Enable RX, TX and RX Complete Interrupt
+	UCSR2B = _BV(RXEN2) | _BV(TXEN2) | _BV(RXCIE2);
 	cli_print_promt();
 }
 
