@@ -14,8 +14,8 @@ int main(void)
 	modbus_uart_init();
 	wifi_uart_init();
 	sei();  // enable interrupts
-    while(true)
-    {
+	while(true)
+	{
 		if (cli_have_data) {
 			cli_process();
 		}
@@ -25,5 +25,5 @@ int main(void)
 		if (wifi_have_data) {
 			wifi_process();
 		}
-    }
+	}
 }
