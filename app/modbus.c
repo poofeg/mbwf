@@ -11,7 +11,7 @@ volatile bool modbus_have_data;
 
 #define MODBUS_WAIT_NO 0
 #define MODBUS_WAIT_35 1
-#define MODBUS_WAIT_15_35 1
+#define MODBUS_WAIT_15_35 2
 bool modbus_wait = MODBUS_WAIT_NO;
 #define MODBUS_MAX_BUFFER 256
 uint8_t modbus_rx_buffer[MODBUS_MAX_BUFFER];
