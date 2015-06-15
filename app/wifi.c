@@ -36,8 +36,8 @@ uint16_t wifi_tx_buffer_cnt;
 void wifi_puts(const char *send)
 {
 	while (*send) {
-		loop_until_bit_is_set(UCSR1A, UDRE1);
-		UDR1 = *send++;
+		loop_until_bit_is_set(UCSR2A, UDRE2);
+		UDR2 = *send++;
 	}
 }
 
@@ -62,8 +62,8 @@ void wifi_send(const uint8_t *send, uint16_t count)
 	wifi_tx_buffer_len = hlen + count;
 	// send first byte
 	wifi_tx_buffer_cnt = 1;
-	loop_until_bit_is_set(UCSR1A, UDRE1);
-	UDR1 = wifi_tx_buffer[0];
+	loop_until_bit_is_set(UCSR2A, UDRE2);
+	UDR2 = wifi_tx_buffer[0];
 }
 
 void wifi_process(void)
@@ -105,28 +105,29 @@ void wifi_module_init(void)
 
 void wifi_uart_init(void)
 {
+	// configure USART2
 	#define BAUD 115200
 	#include <util/setbaud.h>
-	UBRR1H = UBRRH_VALUE;
-	UBRR1L = UBRRL_VALUE;
+	UBRR2H = UBRRH_VALUE;
+	UBRR2L = UBRRL_VALUE;
 
 	#if USE_2X
-	UCSR1A |= _BV(U2X1);
+	UCSR2A |= _BV(U2X2);
 	#else
-	UCSR1A &= ~_BV(U2X1);
+	UCSR2A &= ~_BV(U2X2);
 	#endif
 
-	UCSR1C = _BV(UCSZ11) | _BV(UCSZ10); /* 8-N-1 */
-	// Enable USART1 RX, TX and RX/TX Complete Interrupt
-	UCSR1B = _BV(RXEN1) | _BV(TXEN1) | _BV(RXCIE1) | _BV(TXCIE1);
+	UCSR2C = _BV(UCSZ21) | _BV(UCSZ20); /* 8-N-1 */
+	// Enable USART2 RX, TX and RX/TX Complete Interrupt
+	UCSR2B = _BV(RXEN2) | _BV(TXEN2) | _BV(RXCIE2) | _BV(TXCIE2);
 	
 	wifi_module_init();
 }
 
-ISR(USART1_RX_vect)
+ISR(USART2_RX_vect)
 {
 	uint8_t new_byte;
-	new_byte = UDR1;
+	new_byte = UDR2;
 	// +IPD,<len>:<data>
 	if (!wifi_rx_start && (new_byte == '+')) {
 		wifi_rx_buffer_len = 0;
@@ -158,10 +159,10 @@ ISR(USART1_RX_vect)
 	}
 }
 
-ISR(USART1_TX_vect)
+ISR(USART2_TX_vect)
 {
 	if (wifi_tx_buffer_cnt < wifi_tx_buffer_len) {
 		// send next byte in buffer
-		UDR1 = wifi_tx_buffer[wifi_tx_buffer_cnt++];
+		UDR2 = wifi_tx_buffer[wifi_tx_buffer_cnt++];
 	}
 }

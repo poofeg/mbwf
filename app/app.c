@@ -30,12 +30,15 @@ int main(void)
 	sei();  // enable interrupts
 	while(true)
 	{
+		// check for new character ready
 		if (cli_have_data) {
 			cli_process();
 		}
+		// check for new modbus message
 		if (modbus_have_data) {
 			modbus_process();
 		}
+		// check for new wi-fi datagram
 		if (wifi_have_data) {
 			wifi_process();
 		}

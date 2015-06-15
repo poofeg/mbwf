@@ -50,8 +50,8 @@ uint8_t cli_buffer_len;
 void cli_uart_putc(char send)
 {
 	// data waiting in the hardware to be sent
-	loop_until_bit_is_set(UCSR2A, UDRE2);
-	UDR2 = send;
+	loop_until_bit_is_set(UCSR0A, UDRE0);
+	UDR0 = send;
 }
 
 void cli_uart_puts(const char *send)
@@ -74,7 +74,7 @@ void cli_uart_putul(unsigned long val)
 	cli_uart_puts(ultoa(val, buf, 10));
 }
 
-void cli_print_promt()
+void cli_print_prompt()
 {
 	switch(cli_state) {
 	case STATE_START:
@@ -334,15 +334,15 @@ void cli_process(void)
 		cli_clear_buffer();
 		memset(&cli_temp_config, 0, sizeof(config_t));
 		cli_state = STATE_SSID;
-		cli_print_promt();
+		cli_print_prompt();
 	} else if (last_char == 0x1B) {
 		cli_clear_buffer();
 		cli_state = STATE_START;
-		cli_print_promt();
+		cli_print_prompt();
 	} else if ((last_char == '\n') || (last_char == '\r')) {
 		cli_process_buffer();
 		cli_clear_buffer();
-		cli_print_promt();
+		cli_print_prompt();
 	} else if ((last_char >= 0x20) && (last_char < 0x7F)) {
 		if (cli_buffer_len < CLI_MAX_BUFFER) {
 			cli_buffer[cli_buffer_len++] = last_char;
@@ -356,27 +356,30 @@ void cli_process(void)
 
 void cli_uart_init(void)
 {
+	// configure USART0
 	#define BAUD 9600
 	#include <util/setbaud.h>
-	UBRR2H = UBRRH_VALUE;
-	UBRR2L = UBRRL_VALUE;
+	UBRR0H = UBRRH_VALUE;
+	UBRR0L = UBRRL_VALUE;
 
 	#if USE_2X
-	UCSR2A |= _BV(U2X2);
+	UCSR0A |= _BV(U2X0);
 	#else
-	UCSR2A &= ~_BV(U2X2);
+	UCSR0A &= ~_BV(U2X0);
 	#endif
 
-	UCSR2C = _BV(UCSZ21) | _BV(UCSZ20);  // 8-N-1
+	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);  // 8-N-1
 	// Enable RX, TX and RX Complete Interrupt
-	UCSR2B = _BV(RXEN2) | _BV(TXEN2) | _BV(RXCIE2);
-	cli_print_promt();
+	UCSR0B = _BV(RXEN0) | _BV(TXEN0) | _BV(RXCIE0);
+	
+	// print initial prompt
+	cli_print_prompt();
 }
 
-ISR(USART2_RX_vect)
+ISR(USART0_RX_vect)
 {
 	char new_char;
-	new_char = UDR2;
+	new_char = UDR0;
 	if ((last_char == '\r') && (new_char == '\n')) {
 		return;
 	}

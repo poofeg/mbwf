@@ -54,9 +54,9 @@ void flash_tx_led(void)
 void modbus_start_tx(void)
 {
 	PORTE |= _BV(PE2);  // set DE on RS485
-	loop_until_bit_is_set(UCSR0A, UDRE0);
+	loop_until_bit_is_set(UCSR1A, UDRE1);
 	// send first byte in buffer
-	UDR0 = modbus_tx_buffer[modbus_tx_buffer_cnt++];
+	UDR1 = modbus_tx_buffer[modbus_tx_buffer_cnt++];
 	flash_tx_led();
 }
 
@@ -108,7 +108,7 @@ void modbus_uart_init(void)
 	// Enable PE4 output for TX LED
 	DDRE |= _BV(DDE4);
 	
-	// configure USART0
+	// configure USART1
 	uint16_t ubrr;
 	bool use2x;
 	ubrr = (F_CPU + 8 * config.mb_baud_rate) / (16 * config.mb_baud_rate) - 1;
@@ -118,24 +118,24 @@ void modbus_uart_init(void)
 												config.mb_baud_rate * 2);
 	if (use2x) {
 		ubrr = (F_CPU + 4 * config.mb_baud_rate) / (8 * config.mb_baud_rate) - 1;
-		UCSR0A |= _BV(U2X0);
+		UCSR1A |= _BV(U2X1);
 	} else {
-		UCSR0A &= ~_BV(U2X0);
+		UCSR1A &= ~_BV(U2X1);
 	}
-	UBRR0H = ubrr >> 8;
-	UBRR0L = ubrr & 0xff;
+	UBRR1H = ubrr >> 8;
+	UBRR1L = ubrr & 0xff;
 
 	if (config.mb_parity_bit) {
 		if (config.mb_parity_even) {
-			UCSR0C = _BV(UCSZ01) | _BV(UCSZ00) | _BV(UPM01); /* 8-E-1 */
+			UCSR1C = _BV(UCSZ11) | _BV(UCSZ10) | _BV(UPM11); /* 8-E-1 */
 		} else {
-			UCSR0C = _BV(UCSZ01) | _BV(UCSZ00) | _BV(UPM00) | _BV(UPM01); /* 8-O-1 */
+			UCSR1C = _BV(UCSZ11) | _BV(UCSZ10) | _BV(UPM10) | _BV(UPM11); /* 8-O-1 */
 		}
 	} else {
-		UCSR0C = _BV(UCSZ01) | _BV(UCSZ00) | _BV(USBS0); /* 8-N-2 */
+		UCSR1C = _BV(UCSZ11) | _BV(UCSZ10) | _BV(USBS1); /* 8-N-2 */
 	}
 	// Enable RX, TX and RX/TX Complete Interrupt
-	UCSR0B = _BV(RXEN0) | _BV(TXEN0) | _BV(RXCIE0) | _BV(TXCIE0);
+	UCSR1B = _BV(RXEN1) | _BV(TXEN1) | _BV(RXCIE1) | _BV(TXCIE1);
 
 	modbus_timer_init();
 }
@@ -147,27 +147,27 @@ void modbus_process(void)
 	modbus_have_data = false;
 }
 
-ISR(USART0_RX_vect)
+ISR(USART1_RX_vect)
 {
 	if (!modbus_have_data && (modbus_rx_buffer_len < MODBUS_MAX_BUFFER)) {
-		modbus_rx_buffer[modbus_rx_buffer_len++] = UDR0;
+		modbus_rx_buffer[modbus_rx_buffer_len++] = UDR1;
 		modbus_wait = MODBUS_WAIT_15_35;
 		TCNT0 = 0x00; // zero timer
 		TCCR0B = modbus_TCCR0B; // start timer
 	} else {
 		// we need to flush uart rx buffer anyway
 		uint8_t dummy;
-		dummy = UDR0;
+		dummy = UDR1;
 		(void)dummy;
 	}
 	flash_rx_led();
 }
 
-ISR(USART0_TX_vect)
+ISR(USART1_TX_vect)
 {
 	if (modbus_tx_buffer_cnt < modbus_tx_buffer_len) {
 		// send next byte in buffer
-		UDR0 = modbus_tx_buffer[modbus_tx_buffer_cnt++];
+		UDR1 = modbus_tx_buffer[modbus_tx_buffer_cnt++];
 		flash_tx_led();
 	} else {
 		PORTE &= ~_BV(PE2);  // unset DE on RS485
