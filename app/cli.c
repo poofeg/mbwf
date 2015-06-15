@@ -354,7 +354,8 @@ void cli_process(void)
 	cli_have_data = false;
 }
 
-void cli_uart_init(void) {
+void cli_uart_init(void)
+{
 	#define BAUD 9600
 	#include <util/setbaud.h>
 	UBRR2H = UBRRH_VALUE;
