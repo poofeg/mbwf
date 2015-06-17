@@ -39,6 +39,8 @@ uint8_t modbus_TCCR0B;
 
 void flash_rx_led(void)
 {
+	// turn on adruino LED
+	//PORTB |= _BV(PB7);
 	PORTE |= _BV(PE3); // turn on RX LED
 	TCNT1 = 0x00; // zero timer
 	TCCR1B = _BV(CS12) | _BV(CS10); // start timer with CLK/1024
@@ -46,6 +48,8 @@ void flash_rx_led(void)
 
 void flash_tx_led(void)
 {
+	// turn on adruino LED
+	//PORTB |= _BV(PB7);
 	PORTE |= _BV(PE4); // turn on TX LED
 	TCNT1 = 0x00; // zero timer
 	TCCR1B = _BV(CS12) | _BV(CS10); // start timer with CLK/1024
@@ -81,9 +85,9 @@ void modbus_timer_init(void)
 	uint32_t temp_ocr;
 	// we need find minimal divisor for our F_CPU and baud rate
 	for (int i = 0; i < 5; i++) {
-		temp_ocr = (11 * F_CPU * 35) / (10 * clk_div[i] * config.mb_baud_rate);
+		temp_ocr = (F_CPU / 10 * 11 * 35) / (clk_div[i] * config.mb_baud_rate);
 		if (temp_ocr <= 0xFF) {
-			OCR0A = (11 * F_CPU * 15) / (10 * clk_div[i] * config.mb_baud_rate);
+			OCR0A = (F_CPU / 10 * 11 * 15) / (clk_div[i] * config.mb_baud_rate);
 			OCR0B = temp_ocr;
 			modbus_TCCR0B = div_TCCR0B[i];
 			break;
@@ -96,11 +100,13 @@ void modbus_timer_init(void)
 	
 	// configure 16-bit timer Timer1 for LED
 	TIMSK1 = _BV(OCIE1A); // turn on interrupt
-	OCR1A = TIMER1_OCR; // 0.1 ms
+	OCR1A = TIMER1_OCR; // 100 ms
 }
 
 void modbus_uart_init(void)
 {
+	// Enable PB7 output for arduino TX/RX LED
+	//DDRB |= _BV(DDB7);
 	// Enable PE2 output for RE/DE
 	DDRE |= _BV(DDE2);
 	// Enable PE3 output for RX LED
@@ -138,6 +144,8 @@ void modbus_uart_init(void)
 	UCSR1B = _BV(RXEN1) | _BV(TXEN1) | _BV(RXCIE1) | _BV(TXCIE1);
 
 	modbus_timer_init();
+	
+	//modbus_write("test", 4);
 }
 
 void modbus_process(void)
@@ -204,6 +212,8 @@ ISR(TIMER1_COMPA_vect)
 {
 	// turn off both LEDs
 	PORTE &= ~(_BV(PE3) | _BV(PE4));
+	// turn off arduino LED
+	//PORTB &= ~_BV(PB7);
 	// stop timer Timer1
 	TCCR0B = 0x00;
 }

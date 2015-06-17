@@ -49,6 +49,9 @@ void wifi_putl(long val)
 
 void wifi_send(const uint8_t *send, uint16_t count)
 {
+	// check it have active transmitting of datagram
+	if (wifi_tx_buffer_cnt < wifi_tx_buffer_len) return;
+	// check it have buffer large enough
 	if (count > WIFI_MAX_BUFFER - 17) return;
 	char buf[18] = "AT+CIPSEND=";
 	// put count str in the end if buf (length 11)
@@ -143,11 +146,13 @@ ISR(USART2_RX_vect)
 				wifi_rx_start = false;
 			}
 		} else if (wifi_rx_buffer_len == 5) {
+			// check header
 			if (memcmp("+IPD,", wifi_rx_buffer, 5) != 0) {
 				wifi_rx_buffer_len = 0;
 				wifi_rx_start = false;
 			}
-		} else if (wifi_rx_buffer_len > 5) {
+		} else if ((wifi_rx_buffer_len > 5) && (wifi_rx_buffer_len < 10)) {
+			// wait for data length field end
 			if (new_byte == ':') {
 				char buf[5];
 				memset(buf, 0, 5);
@@ -155,6 +160,10 @@ ISR(USART2_RX_vect)
 				wifi_rx_expect = atol(buf);
 				wifi_rx_buffer_len = 0;
 			}
+		} else {
+			// data length field very large. drop rx
+			wifi_rx_buffer_len = 0;
+			wifi_rx_start = false;
 		}
 	}
 }

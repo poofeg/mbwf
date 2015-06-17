@@ -33,7 +33,7 @@ do                          \
 	}                       \
 } while(0)
 
-#define F_CPU 3686400
+#define F_CPU 16000000L
 
 typedef struct config_t {
 	char wifi_ssid[33];
