@@ -41,7 +41,7 @@ void flash_rx_led(void)
 {
 	// turn on adruino LED
 	//PORTB |= _BV(PB7);
-	PORTE &= ~_BV(PE3); // turn on RX LED
+	PORTE &= ~_BV(PE2); // turn on RX LED
 	TCNT1 = 0x00; // zero timer
 	TCCR1B = _BV(CS12) | _BV(CS10); // start timer with CLK/1024
 }
@@ -50,14 +50,14 @@ void flash_tx_led(void)
 {
 	// turn on adruino LED
 	//PORTB |= _BV(PB7);
-	PORTE &= ~_BV(PE4); // turn on TX LED
+	PORTE &= ~_BV(PE3); // turn on TX LED
 	TCNT1 = 0x00; // zero timer
 	TCCR1B = _BV(CS12) | _BV(CS10); // start timer with CLK/1024
 }
 
 void modbus_start_tx(void)
 {
-	PORTE |= _BV(PE2);  // set DE on RS485
+	PORTD |= _BV(PD0);  // set DE on RS485
 	loop_until_bit_is_set(UCSR1A, UDRE1);
 	// send first byte in buffer
 	UDR1 = modbus_tx_buffer[modbus_tx_buffer_cnt++];
@@ -107,12 +107,12 @@ void modbus_uart_init(void)
 {
 	// Enable PB7 output for arduino TX/RX LED
 	//DDRB |= _BV(DDB7);
-	// Enable PE2 output for RE/DE
-	DDRE |= _BV(DDE2);
-	// Enable PE3 and PE4 output for RX and TX LED
-	DDRE |= _BV(DDE3) | _BV(DDE4);
+	// Enable PD0 output for RE/DE
+	DDRD |= _BV(DDD0);
+	// Enable PE2 and PE3 output for RX and TX LED
+	DDRE |= _BV(DDE2) | _BV(DDE3);
 	// Set high level by default
-	PORTE |= _BV(PE3) | _BV(PE4);
+	PORTE |= _BV(PE2) | _BV(PE3);
 	
 	// configure USART1
 	uint16_t ubrr;
@@ -178,7 +178,7 @@ ISR(USART1_TX_vect)
 		UDR1 = modbus_tx_buffer[modbus_tx_buffer_cnt++];
 		flash_tx_led();
 	} else {
-		PORTE &= ~_BV(PE2);  // unset DE on RS485
+		PORTD &= ~_BV(PD0);  // unset DE on RS485
 		// block I/O for 3.5 chars
 		modbus_wait = MODBUS_WAIT_15_35;
 		TCNT0 = 0x00; // zero timer
@@ -211,7 +211,7 @@ ISR(TIMER0_COMPB_vect)
 ISR(TIMER1_COMPA_vect)
 {
 	// turn off both LEDs
-	PORTE |= _BV(PE3) | _BV(PE4);
+	PORTE |= _BV(PE2) | _BV(PE3);
 	// turn off arduino LED
 	//PORTB &= ~_BV(PB7);
 	// stop timer Timer1
