@@ -78,16 +78,16 @@ void wifi_process(void)
 
 void wifi_module_init(void)
 {
-	wifi_puts("AT+CWMODE=\"Station\"\r\n");
-	_delay_ms(500);
+	wifi_puts("AT+CWMODE=1\r\n");
+	_delay_ms(200);
 	wifi_puts("AT+RST\r\n");
-	_delay_ms(1000);
+	_delay_ms(3500);
 	wifi_puts("AT+CWJAP=\"");
 	wifi_puts(config.wifi_ssid);
 	wifi_puts("\",\"");
 	wifi_puts(config.wifi_key);
 	wifi_puts("\"\r\n");
-	_delay_ms(1000);
+	_delay_ms(3500);
 	wifi_puts("AT+CIPSTA=\"");
 	wifi_puts(config.wifi_ip);
 	wifi_puts("\",\"");
@@ -95,15 +95,15 @@ void wifi_module_init(void)
 	wifi_puts("\",\"");
 	wifi_puts(config.wifi_gateway);
 	wifi_puts("\"\r\n");
-	_delay_ms(500);
+	_delay_ms(200);
 	wifi_puts("AT+CIPMUX=0\r\n");
-	_delay_ms(500);
-	wifi_puts("AT+CIPSTART=\"UDP\",\"0.0.0.0\",\"");
+	_delay_ms(200);
+	wifi_puts("AT+CIPSTART=\"UDP\",\"255.255.255.255\",");
 	wifi_putl(config.wifi_udp_dst);
-	wifi_puts("\",\"");
+	wifi_puts(",");
 	wifi_putl(config.wifi_udp_src);
 	wifi_puts(",0\r\n");
-	_delay_ms(500);
+	_delay_ms(200);
 }
 
 void wifi_uart_init(void)

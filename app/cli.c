@@ -83,7 +83,8 @@ void cli_print_prompt()
 		break;
 	case STATE_SSID:
 		cli_uart_puts("\x1B[2J\r\n");
-		cli_uart_puts("You are about to be asked to enter information to configure the device.\r\n");
+		cli_uart_puts("You are about to be asked to enter information to configure"
+				" the device.\r\n");
 		cli_uart_puts("You can leave fields blank to save last value.\r\n");
 		cli_uart_puts("SSID [");
 		cli_uart_puts(config.wifi_ssid);
@@ -371,7 +372,7 @@ void cli_uart_init(void)
 	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00);  // 8-N-1
 	// Enable RX, TX and RX Complete Interrupt
 	UCSR0B = _BV(RXEN0) | _BV(TXEN0) | _BV(RXCIE0);
-	
+
 	// print initial prompt
 	cli_print_prompt();
 }
