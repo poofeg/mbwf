@@ -160,7 +160,7 @@ ISR(USART2_RX_vect)
 				wifi_rx_expect = atol(buf);
 				wifi_rx_buffer_len = 0;
 			}
-		} else {
+		} else if (wifi_rx_buffer_len >= 10) {
 			// data length field very large. drop rx
 			wifi_rx_buffer_len = 0;
 			wifi_rx_start = false;
@@ -171,6 +171,9 @@ ISR(USART2_RX_vect)
 ISR(USART2_TX_vect)
 {
 	if (wifi_tx_buffer_cnt < wifi_tx_buffer_len) {
+		if (wifi_tx_buffer[wifi_tx_buffer_cnt-1] == '\n') {
+			_delay_ms(40);
+		}
 		// send next byte in buffer
 		UDR2 = wifi_tx_buffer[wifi_tx_buffer_cnt++];
 	}

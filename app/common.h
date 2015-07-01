@@ -53,6 +53,7 @@ void cli_uart_init(void);
 void cli_process(void);
 void cli_uart_puts(const char *send);
 void cli_uart_putl(long val);
+void cli_uart_putc(char send);
 
 extern struct config_t config;
 void read_settings(void);
